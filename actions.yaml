@@ -1,0 +1,26 @@
+list-backups:
+  description: List all backups for this service
+  additionalProperties: false
+manual-backup:
+  description: |
+    Perform a manual backup of all directories that are marked
+    for backup
+  params:
+    directory-list:
+      type: array
+      description: |
+        A list of directories that you wish to be manually backed up.
+  required: [directory-list]
+  additionalProperties: false
+restore-backup:
+  description: Restore a previous backup
+  params:
+    backup-name:
+      type: string
+      description: |
+        The name of the backup you would like restored
+    restore-path:
+      type: string
+      description: The path to restore the backup to.
+  required: [backup-name, restore-path]
+  additionalProperties: false

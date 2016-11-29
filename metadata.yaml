@@ -1,0 +1,17 @@
+name: backup
+summary: Encrypt and backup a service
+maintainer: OpenStack Charmers <openstack-charmers@lists.ubuntu.com>
+description: |
+  This charm utilizes the preserve program to backup to an untrusted
+  backend.  Your data will be split into 1MB chunks, encrypted and 
+  then stored.
+tags:
+  - backup
+subordinate: true
+provides:
+  juju-info:
+    interface: juju-info
+    scope: container
+requires:
+  vault:
+    interface: http

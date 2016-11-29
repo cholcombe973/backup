@@ -1,0 +1,75 @@
+#!/usr/bin/python
+import time
+import tarfile
+from subprocess import check_output, CalledProcessError
+
+from charmhelpers.core.hookenv import log, action_get, action_fail
+
+__author__ = 'Chris Holcombe <chris.holcombe@canonical.com>'
+
+
+def tar_files(name, file_list):
+    """
+    Create a gzipped tar file containing all the files in the file list.
+    :param file_list: A list of file, fifo, symbolic link, directory,
+        etc to include in this tarball.
+    """
+    try:
+        tar = tarfile.open(name=name, mode='w:gz')
+        for f in file_list:
+            tar.add(f)
+        tar.close()
+    except tarfile.TarError as err:
+        log("tar creation failed with message: {}".format(
+            err.message))
+        action_fail("manual_backup failed.  tar creation failed with "
+                    "message: {}".format(err.message))
+
+
+def backup_to_ceph(service, namespace, file_list, pool='backup'):
+    """
+    A generic backup function that will tar the files and send them to ceph.
+    :param service: six.string_types. The Ceph user name to run the command
+      under
+    :param namespace: six.string_types. The namespace to put the backups under.
+      Using the service name is a good idea here.
+    :param pool: Which ceph pool to backup to.  Defaults to 'backup'
+    :param file_list: A list of file locations to tgz up
+    :return:
+    """
+    timestamp = time.strftime("%F_%H:%M:%S-%Z", time.gmtime())
+    month = time.strftime("%m")
+    object_name = "{service_name}-{timestamp}.tar.gz".format(
+        service_name=namespace, timestamp=timestamp)
+    tar_files(name=object_name, file_list=file_list)
+    try:
+        check_output(
+            ['rados',
+             '--id', service,
+             '-p', pool,
+             '--namespace', "{namespace}-{month}".format(namespace=namespace,
+                                                         month=month),
+             'put',
+             object_name,
+             '/etc/ceph' + object_name,
+             ]
+        )
+    except CalledProcessError as e:
+        log("rados put failed with message: {}".format(e.output))
+        action_fail("manual_backup failed : {}".format(e.output))
+
+
+def manual_backup():
+    namespace = action_get('namespace')
+    pool = action_get('pool')
+    if pool is None:
+        pool = 'backup'
+    directories = action_get('directory-list')
+    backup_to_ceph(service='',
+                   namespace=namespace,
+                   file_list=directories,
+                   pool=pool)
+
+
+if __name__ == '__main__':
+    manual_backup()

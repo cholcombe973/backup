@@ -1,0 +1,16 @@
+options:
+  backup-frequency:
+    type: string
+    default: "@daily"
+    description: |
+         How often to run backups.  Any valid crontab specification will work here. For more
+         information please see man 5 cronttab
+  backup-path:
+    type: string
+    default: "/mnt"
+    description: "The path(s) to backup.  Multiple paths can be given with space separation"
+  follow-symlimks:
+    type: boolean
+    default: true
+    description: "Dereference symlinks and backup the path they are pointing to"
+

@@ -1,0 +1,6 @@
+#!/bin/sh
+#Backup jobs
+{% for directory in directories %}
+{{cron-spec}} preserve create --backend ceph:// {{name}} {{directory}}
+{% endfor %}
+
