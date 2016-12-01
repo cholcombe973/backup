@@ -1,4 +1,4 @@
-name: backup
+name: preserve
 summary: Encrypt and backup a service
 maintainer: OpenStack Charmers <openstack-charmers@lists.ubuntu.com>
 description: |
@@ -8,10 +8,15 @@ description: |
 tags:
   - backup
 subordinate: true
-provides:
+series: ['xenial']
+requires:
   juju-info:
     interface: juju-info
     scope: container
-requires:
   vault:
     interface: http
+  mon:
+    interface: ceph-client
+  gluster:
+    interface: gluster-fuse
+    optiona: true
