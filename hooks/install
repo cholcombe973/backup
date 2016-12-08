@@ -19,5 +19,7 @@ done
 
 # Ensure that charmhelpers is installed
 pip2 install charmhelpers
+# Install after the snap lands in the snappy store
+# snap install preserve.cholcombe973 --channel edge
 
 exec ./hooks/install.real

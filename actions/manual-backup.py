@@ -13,10 +13,12 @@ def manual_backup():
     try:
         for directory in directories_to_backup:
             check_output(
-                ["preserve", "create", "--backend", "ceph://",
+                ["/snap/bin/preserve", "create",
                  "{name}-{timestamp}".format(name=directory,
                                              timestamp=timestamp),
-                 str(directory)])
+                 str(directory),
+                 "--backend", "ceph://"
+                 ])
     except OSError as err:
         log("Create backup failed with error: {}".format(err.message),
             level=ERROR)

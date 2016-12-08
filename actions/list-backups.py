@@ -12,7 +12,7 @@ def list_backups():
     try:
         # keyfile is in vault
         preserve_list = check_output(
-            ["preserve", "list", "--backend", "ceph://",
+            ["/snap/bin/preserve", "list", "--backend", "ceph://",
              "--json"])
         try:
             backup_list = json.loads(preserve_list)

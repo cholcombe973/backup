@@ -14,7 +14,7 @@ requires:
     interface: juju-info
     scope: container
   vault:
-    interface: http
+    interface: vault
   mon:
     interface: ceph-client
   gluster:

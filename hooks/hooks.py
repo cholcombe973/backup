@@ -5,6 +5,7 @@ import os
 from os.path import expanduser
 
 from charmhelpers.fetch import add_source, apt_update, apt_install
+from subprocess import check_output
 
 __author__ = 'Chris Holcombe <chris.holcombe@canonical.com>'
 
@@ -17,7 +18,7 @@ from charmhelpers.core.templating import render
 from charmhelpers.core.hookenv import (
     status_set,
     config, log,
-    Hooks, relation_get, UnregisteredHookError, WARNING)
+    Hooks, relation_get, UnregisteredHookError, WARNING, relation_ids)
 
 from ceph.ceph_helpers import (
     get_mon_hosts
@@ -63,13 +64,13 @@ BACKEND = Backend(None)
 
 
 def emit_cephconf(ceph_context):
-    cron_path = os.path.join(os.sep,
+    ceph_path = os.path.join(os.sep,
                              "etc",
                              "ceph",
                              "ceph.conf")
     try:
         render('ceph.conf',
-               cron_path,
+               ceph_path,
                ceph_context,
                perms=0o644)
     except IOError as err:
@@ -94,7 +95,8 @@ def install_ceph():
     add_source(config('ceph-source'), config('ceph-key'))
     add_source(config('gluster-source'), config('gluster-key'))
     apt_update(fatal=True)
-    apt_install(packages=['ceph', 'glusterfs-common'], fatal=True)
+    apt_install(packages=['ceph', 'glusterfs-common'],
+                fatal=True)
 
 
 def setup_cron_job(cron_spec, directories_list):
@@ -173,12 +175,15 @@ def ceph_relation_changed():
         emit_cephconf(ceph_context=context)
         write_config(config_file_name='ceph.json', contents={
             'config_file': '/etc/ceph/ceph.conf',
-            'user_id': 'client.preserve',
+            'user_id': 'preserve',
             'data_pool': 'data',
             'metadata_pool': 'metadata',
         })
         write_cephx_key(key)
         BACKEND = Backend('ceph')
+    if not relation_ids('vault'):
+        status_set('maintenance', 'Please relate vault')
+        setup_backup_cron()
 
 
 @hooks.hook('mon-relation-departed')
@@ -189,14 +194,20 @@ def ceph_relation_departed():
     """
     global BACKEND
     BACKEND = Backend(None)
+    # Remove the config file so we no longer connect to Ceph with preserve
+    base_path = os.path.join(expanduser("~"), ".config")
+    os.remove(os.path.join(base_path, 'ceph.json'))
 
 
+@hooks.hook('vault-relation-joined')
 @hooks.hook('vault-relation-changed')
 def vault_relation_changed():
     write_config(config_file_name='vault.json', contents={
-        'host': relation_get('host'),
-        'token': relation_get('token')
+        'host': 'http://{host}:{port}'.format(host=relation_get('host'),
+                                              port='8200'),
+        'token': relation_get('token'),
     })
+    # check_output(["preserve", "keygen"])
 
 
 @hooks.hook('vault-relation-departed')
@@ -205,7 +216,8 @@ def vault_relation_departed():
     Vault has been disconnected
 
     """
-    pass
+    base_path = os.path.join(expanduser("~"), ".config")
+    os.remove(os.path.join(base_path, 'vault.json'))
 
 
 @hooks.hook('gluster-relation-departed')
@@ -216,6 +228,8 @@ def gluster_relation_departed():
     """
     global BACKEND
     BACKEND = Backend(None)
+    base_path = os.path.join(expanduser("~"), ".config")
+    os.remove(os.path.join(base_path, 'gluster.json'))
 
 
 @hooks.hook('gluster-relation-joined')
@@ -232,13 +246,25 @@ def gluster_relation_changed():
             'volume_name': 'test'
         })
         BACKEND = Backend('gluster')
+    if not relation_ids('vault'):
+        status_set('maintenance', 'Please relate vault')
+        setup_backup_cron()
 
 
 def assess_status():
-    global BACKEND
-    if BACKEND.get_backend() is None:
-        status_set('blocked', 'Please relate to a backend')
-    status_set('active', 'Ready to run backups')
+    backend_related = False
+    vault_related = False
+    if not relation_ids('mon') or relation_ids('gluster'):
+        status_set('blocked',
+                   'Please relate to a backend.  Either gluster or ceph-mon')
+    backend_related = True
+    if not relation_ids('vault'):
+        status_set('blocked',
+                   'Please relate to vault to store the key file')
+    vault_related = True
+
+    if vault_related and backend_related:
+        status_set('active', 'Ready to run backups')
 
 
 if __name__ == '__main__':

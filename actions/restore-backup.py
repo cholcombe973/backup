@@ -18,7 +18,7 @@ def restore_backup():
     try:
         # keyfile is in vault
         check_output(
-            ["preserve", "restore", "--backend", "ceph://",
+            ["/snap/bin/preserve", "restore", "--backend", "ceph://",
              backup_name, restore_path])
 
     except OSError as err:
