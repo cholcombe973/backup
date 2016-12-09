@@ -1,10 +1,1 @@
-#!/usr/bin/python
-__author__ = 'Chris Holcombe <chris.holcombe@canonical.com>'
-
-
-def restore_backup():
-    pass
-
-
-if __name__ == '__main__':
-    restore_backup()
+restore-backup.py
