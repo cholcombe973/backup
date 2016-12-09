@@ -71,11 +71,6 @@ backup charm and it should take care of the rest.
 
 ## Upstream Project Name
 
-  - Upstream website
-  - Upstream bug tracker
-  - Upstream mailing list or contact information
-  - Feel free to add things if it's useful for users
+  - https://github.com/cholcombe973/preserve
+  - https://github.com/cholcombe973/preserve/issues
 
-
-[service]: http://example.com
-[icon guidelines]: https://jujucharms.com/docs/stable/authors-charm-icon
