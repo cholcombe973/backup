@@ -26,7 +26,7 @@ from ceph.ceph_helpers import (
 hooks = Hooks()
 
 valid_backup_periods = ['monthly', 'weekly', 'daily', 'hourly']
-CONFIG_DIR = os.path.join("root", "preserve", "snap", "common")
+CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".config")
 
 
 class Backend:
@@ -133,6 +133,8 @@ def write_config(config_file_name, contents):
     :param config_file_name: six.string_types. The config file name to create
     :param contents:  dict. A dict holding the values to write to the json file
     """
+    if not os.path.exists(CONFIG_DIR):
+        os.mkdir(CONFIG_DIR)
     path = os.path.join(CONFIG_DIR, config_file_name)
     try:
         with open(path, 'w') as config_file:
@@ -203,7 +205,7 @@ def vault_relation_changed():
                                               port='8200'),
         'token': relation_get('token'),
     })
-    check_output(["preserve", "keygen", "--vault"])
+    check_output(["preserve", "--configdir", CONFIG_DIR, "keygen", "--vault"])
 
 
 @hooks.hook('vault-relation-departed')

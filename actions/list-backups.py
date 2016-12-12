@@ -15,7 +15,7 @@ def list_backups():
         preserve_list = check_output(
             ["/snap/bin/preserve",
              "--configdir",
-             os.path.join("root", "snap", "preserve", "common"),
+             os.path.join(os.path.expanduser("~"), ".config"),
              "list", "--vault", "--backend", "ceph://",
              "--json"])
         try:

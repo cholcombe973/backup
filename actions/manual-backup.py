@@ -16,7 +16,7 @@ def manual_backup():
             check_output(
                 ["/snap/bin/preserve",
                  "--configdir",
-                 os.path.join("root", "snap", "preserve", "common"),
+                 os.path.join(os.path.expanduser("~"), ".config"),
                  "create",
                  "{name}-{timestamp}".format(name=directory,
                                              timestamp=timestamp),
