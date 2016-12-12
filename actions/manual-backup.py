@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 from charmhelpers.core.hookenv import log, action_get, action_fail, ERROR
 from subprocess import check_output
 import datetime
@@ -13,7 +14,10 @@ def manual_backup():
     try:
         for directory in directories_to_backup:
             check_output(
-                ["/snap/bin/preserve", "create",
+                ["/snap/bin/preserve",
+                 "--configdir",
+                 os.path.join("root", "snap", "preserve", "common"),
+                 "create",
                  "{name}-{timestamp}".format(name=directory,
                                              timestamp=timestamp),
                  str(directory),

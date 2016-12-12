@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 from subprocess import check_output
 import json
 
@@ -12,7 +13,10 @@ def list_backups():
     try:
         # keyfile is in vault
         preserve_list = check_output(
-            ["/snap/bin/preserve", "list", "--backend", "ceph://",
+            ["/snap/bin/preserve",
+             "--configdir",
+             os.path.join("root", "snap", "preserve", "common"),
+             "list", "--vault", "--backend", "ceph://",
              "--json"])
         try:
             backup_list = json.loads(preserve_list)

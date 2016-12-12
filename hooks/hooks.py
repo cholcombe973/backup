@@ -27,6 +27,7 @@ from ceph.ceph_helpers import (
 hooks = Hooks()
 
 valid_backup_periods = ['monthly', 'weekly', 'daily', 'hourly']
+CONFIG_DIR = os.path.join("root", "preserve", "snap", "common")
 
 
 class Backend:
@@ -133,10 +134,7 @@ def write_config(config_file_name, contents):
     :param config_file_name: six.string_types. The config file name to create
     :param contents:  dict. A dict holding the values to write to the json file
     """
-    base_path = os.path.join(expanduser("~"), ".config")
-    if not os.path.exists(base_path):
-        os.mkdir(base_path)
-    path = os.path.join(base_path, config_file_name)
+    path = os.path.join(CONFIG_DIR, config_file_name)
     try:
         with open(path, 'w') as config_file:
             config_file.write(json.dumps(contents))
@@ -195,8 +193,7 @@ def ceph_relation_departed():
     global BACKEND
     BACKEND = Backend(None)
     # Remove the config file so we no longer connect to Ceph with preserve
-    base_path = os.path.join(expanduser("~"), ".config")
-    os.remove(os.path.join(base_path, 'ceph.json'))
+    os.remove(os.path.join(CONFIG_DIR, 'ceph.json'))
 
 
 @hooks.hook('vault-relation-joined')
@@ -207,7 +204,7 @@ def vault_relation_changed():
                                               port='8200'),
         'token': relation_get('token'),
     })
-    # check_output(["preserve", "keygen"])
+    check_output(["preserve", "keygen", "--vault"])
 
 
 @hooks.hook('vault-relation-departed')
@@ -216,8 +213,7 @@ def vault_relation_departed():
     Vault has been disconnected
 
     """
-    base_path = os.path.join(expanduser("~"), ".config")
-    os.remove(os.path.join(base_path, 'vault.json'))
+    os.remove(os.path.join(CONFIG_DIR, 'vault.json'))
 
 
 @hooks.hook('gluster-relation-departed')
@@ -228,8 +224,7 @@ def gluster_relation_departed():
     """
     global BACKEND
     BACKEND = Backend(None)
-    base_path = os.path.join(expanduser("~"), ".config")
-    os.remove(os.path.join(base_path, 'gluster.json'))
+    os.remove(os.path.join(CONFIG_DIR, 'gluster.json'))
 
 
 @hooks.hook('gluster-relation-joined')
