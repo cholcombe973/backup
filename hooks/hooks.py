@@ -2,10 +2,9 @@
 
 import json
 import os
-from os.path import expanduser
+from subprocess import check_output
 
 from charmhelpers.fetch import add_source, apt_update, apt_install
-from subprocess import check_output
 
 __author__ = 'Chris Holcombe <chris.holcombe@canonical.com>'
 

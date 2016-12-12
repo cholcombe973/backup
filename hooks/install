@@ -20,6 +20,7 @@ done
 # Ensure that charmhelpers is installed
 pip2 install charmhelpers
 echo "Installing preserve snap"
-snap install preserve --channel candidate
+# Use devmode until permissions can be worked out properly
+snap install preserve --channel candidate --devmode
 
 exec ./hooks/install.real
