@@ -137,6 +137,7 @@ def write_config(config_file_name, contents):
         os.mkdir(CONFIG_DIR)
     path = os.path.join(CONFIG_DIR, config_file_name)
     try:
+        status_set('maintenance', 'Writing config: {}'.format(path))
         with open(path, 'w') as config_file:
             config_file.write(json.dumps(contents))
     except IOError as err:
@@ -205,7 +206,12 @@ def vault_relation_changed():
                                               port='8200'),
         'token': relation_get('token'),
     })
-    check_output(["preserve", "--configdir", CONFIG_DIR, "keygen", "--vault"])
+    if not os.path.exists(CONFIG_DIR):
+        log("Creating config directory: {}".format(CONFIG_DIR))
+        status_set('maintenance', 'Creating config dir: {}'.format(CONFIG_DIR))
+        os.mkdir(CONFIG_DIR)
+    check_output(
+        ["/snap/bin/preserve", "--configdir", CONFIG_DIR, "keygen", "--vault"])
 
 
 @hooks.hook('vault-relation-departed')
