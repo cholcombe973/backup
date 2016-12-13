@@ -154,7 +154,7 @@ def ceph_relation_changed():
             write_config(config_file_name='ceph.json', contents={
                 'config_file': '/etc/ceph/ceph.conf',
                 'user_id': 'preserve',
-                'data_pool': 'data',
+                'data_pool': 'preserve_data',
             })
             write_cephx_key(key)
             if not relation_ids('vault'):
