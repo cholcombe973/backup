@@ -4,19 +4,27 @@ from subprocess import check_output
 import json
 
 from charmhelpers.core.hookenv import action_set, log, ERROR, \
-    action_fail
+    action_fail, DEBUG
+import sys
+
+sys.path.append('hooks')
+from common import Backend
 
 __author__ = 'Chris Holcombe <chris.holcombe@canonical.com>'
 
 
 def list_backups():
+    backend = Backend()
     try:
-        # keyfile is in vault
+        log("Listing backups", level=DEBUG)
         preserve_list = check_output(
             ["/snap/bin/preserve",
              "--configdir",
              os.path.join(os.path.expanduser("~"), ".config"),
-             "list", "--vault", "--backend", "ceph://",
+             "--loglevel", "error",
+             "list",
+             "--vault",
+             "--backend", backend.get_backend(),
              "--json"])
         try:
             backup_list = json.loads(preserve_list)

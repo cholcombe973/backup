@@ -6,6 +6,9 @@ from subprocess import check_output
 
 from charmhelpers.fetch import add_source, apt_update, apt_install
 
+from lib.ceph.ceph_helpers import send_request_if_needed, is_request_complete, \
+    CephBrokerRq
+
 __author__ = 'Chris Holcombe <chris.holcombe@canonical.com>'
 
 import sys
@@ -17,50 +20,18 @@ from charmhelpers.core.templating import render
 from charmhelpers.core.hookenv import (
     status_set,
     config, log,
-    Hooks, relation_get, UnregisteredHookError, WARNING, relation_ids)
+    Hooks, relation_get, UnregisteredHookError, relation_ids, DEBUG)
 
 from ceph.ceph_helpers import (
     get_mon_hosts
 )
 
+from common import Backend
+
 hooks = Hooks()
 
 valid_backup_periods = ['monthly', 'weekly', 'daily', 'hourly']
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".config")
-
-
-class Backend:
-    """
-    This object holds the value of the current backend to backup to
-    """
-    backend_url = {
-        'ceph': 'ceph://',
-        'gluster': 'gluster://'
-    }
-
-    def __init__(self, backend):
-        if backend in self.backend_url.keys():
-            self.backend = backend
-        else:
-            log('Invalid backend: {}.  Valid backends are: {}'.format(
-                backend,
-                self.backend_url.keys()),
-                level=WARNING)
-            self.backend = None
-
-    def get_backend(self):
-        """
-        Return the URL for preserve to backup to
-
-        :return: string
-        """
-        if self.backend in self.backend_url:
-            return self.backend_url[self.backend]
-        else:
-            return None
-
-
-BACKEND = Backend(None)
 
 
 def emit_cephconf(ceph_context):
@@ -106,6 +77,7 @@ def setup_cron_job(cron_spec, directories_list):
                              "backup")
     directories = ' '.join(directories_list)
     context = {'directories': directories}
+    backend = Backend()
 
     if os.path.exists(cron_path):
         # Check the file
@@ -114,7 +86,7 @@ def setup_cron_job(cron_spec, directories_list):
         # Create a new file
         try:
             context['cron_spec'] = cron_spec
-            context['backend'] = BACKEND
+            context['backend'] = backend.get_backend()
             context['name'] = 'backup_name'
 
             render('backup_cron',
@@ -160,30 +132,36 @@ def setup_backup_cron():
 @hooks.hook('mon-relation-joined')
 @hooks.hook('mon-relation-changed')
 def ceph_relation_changed():
-    global BACKEND
-    public_addr = relation_get('ceph-public-address')
-    auth = relation_get('auth')
-    key = relation_get('key')
-    if key and auth and public_addr:
-        mon_hosts = get_mon_hosts()
-        context = {
-            'auth_supported': auth,
-            'mon_hosts': ' '.join(mon_hosts),
-            'use_syslog': 'true',
-            'loglevel': config('loglevel'),
-        }
-        emit_cephconf(ceph_context=context)
-        write_config(config_file_name='ceph.json', contents={
-            'config_file': '/etc/ceph/ceph.conf',
-            'user_id': 'preserve',
-            'data_pool': 'data',
-            'metadata_pool': 'metadata',
-        })
-        write_cephx_key(key)
-        BACKEND = Backend('ceph')
-    if not relation_ids('vault'):
-        status_set('maintenance', 'Please relate vault')
-        setup_backup_cron()
+    # Request that pools be created
+    rq = CephBrokerRq()
+    rq.add_op_create_pool(name="preserve_data",
+                          replica_count=3,
+                          weight=None)
+    if is_request_complete(rq, relation='mon'):
+        log('Broker request complete', level=DEBUG)
+        public_addr = relation_get('ceph-public-address')
+        auth = relation_get('auth')
+        key = relation_get('key')
+        if key and auth and public_addr:
+            mon_hosts = get_mon_hosts()
+            context = {
+                'auth_supported': auth,
+                'mon_hosts': ' '.join(mon_hosts),
+                'use_syslog': 'true',
+                'loglevel': config('loglevel'),
+            }
+            emit_cephconf(ceph_context=context)
+            write_config(config_file_name='ceph.json', contents={
+                'config_file': '/etc/ceph/ceph.conf',
+                'user_id': 'preserve',
+                'data_pool': 'data',
+            })
+            write_cephx_key(key)
+            if not relation_ids('vault'):
+                status_set('maintenance', 'Please relate vault')
+                setup_backup_cron()
+    else:
+        send_request_if_needed(rq, relation='mon')
 
 
 @hooks.hook('mon-relation-departed')
@@ -192,8 +170,6 @@ def ceph_relation_departed():
     Ceph has been disconnected
 
     """
-    global BACKEND
-    BACKEND = Backend(None)
     # Remove the config file so we no longer connect to Ceph with preserve
     os.remove(os.path.join(CONFIG_DIR, 'ceph.json'))
 
@@ -229,15 +205,12 @@ def gluster_relation_departed():
     Gluster has been disconnected
 
     """
-    global BACKEND
-    BACKEND = Backend(None)
     os.remove(os.path.join(CONFIG_DIR, 'gluster.json'))
 
 
 @hooks.hook('gluster-relation-joined')
 @hooks.hook('gluster-relation-changed')
 def gluster_relation_changed():
-    global BACKEND
     public_addr = relation_get('gluster-public-address')
     volumes = relation_get('volumes')
     # TODO: Which volume should we use?
@@ -247,7 +220,6 @@ def gluster_relation_changed():
             'port': '24007',
             'volume_name': 'test'
         })
-        BACKEND = Backend('gluster')
     if not relation_ids('vault'):
         status_set('maintenance', 'Please relate vault')
         setup_backup_cron()
