@@ -1,19 +1,17 @@
 #!/usr/bin/python
 
+__author__ = 'Chris Holcombe <chris.holcombe@canonical.com>'
 import json
 import os
 from subprocess import check_output
 
 from charmhelpers.fetch import add_source, apt_update, apt_install
 
-from lib.ceph.ceph_helpers import send_request_if_needed, is_request_complete, \
-    CephBrokerRq
-
-__author__ = 'Chris Holcombe <chris.holcombe@canonical.com>'
-
 import sys
 
 sys.path.append('lib')
+from ceph.ceph_helpers import send_request_if_needed, is_request_complete, \
+    CephBrokerRq
 
 from charmhelpers.core.templating import render
 
