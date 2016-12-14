@@ -56,8 +56,6 @@ def write_cephx_key(keyring):
     except IOError as err:
         log("IOError writing ceph.client.preserve.keyring: {}".format(err))
 
-    pass
-
 
 @hooks.hook('install.real')
 def install_ceph():
@@ -77,23 +75,24 @@ def setup_cron_job(cron_spec, directories_list):
     context = {'directories': directories}
     backend = Backend()
 
-    if os.path.exists(cron_path):
-        # Check the file
-        pass
-    else:
-        # Create a new file
-        try:
-            context['cron_spec'] = cron_spec
-            context['backend'] = backend.get_backend()
-            context['name'] = 'backup_name'
+    # Overwrite the file if needed
+    try:
+        context['cron_spec'] = cron_spec
+        context['backend'] = backend.get_backend()
+        context['configdir'] = CONFIG_DIR
+        # Add --vault flag if vault is related
+        if relation_ids('vault'):
+            context['vault'] = True
+        else:
+            context['vault'] = False
 
-            render('backup_cron',
-                   cron_path,
-                   context,
-                   perms=0o644)
-        except IOError as err:
-            log("Error creating cron file: {}".format(err.message),
-                level='error')
+        render('backup_cron',
+               cron_path,
+               context,
+               perms=0o644)
+    except IOError as err:
+        log("Error creating cron file: {}".format(err.message),
+            level='error')
 
 
 def write_config(config_file_name, contents):
@@ -155,9 +154,7 @@ def ceph_relation_changed():
                 'data_pool': 'preserve_data',
             })
             write_cephx_key(key)
-            if not relation_ids('vault'):
-                status_set('maintenance', 'Please relate vault')
-                setup_backup_cron()
+            setup_backup_cron()
     else:
         send_request_if_needed(rq, relation='mon')
 
@@ -218,9 +215,7 @@ def gluster_relation_changed():
             'port': '24007',
             'volume_name': 'test'
         })
-    if not relation_ids('vault'):
-        status_set('maintenance', 'Please relate vault')
-        setup_backup_cron()
+    setup_backup_cron()
 
 
 def assess_status():

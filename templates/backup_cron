@@ -1,6 +1,5 @@
 #!/bin/sh
 #Backup jobs
 {% for directory in directories %}
-{{cron_spec}} preserve create --backend {{ backend }}:// {{ name }} {{ directory }}
+{{cron_spec}} /snap/bin/preserve --configdir {{ configdir}} --loglevel info create {{directory}}-`date +%Y-%m-%d-%H-%M-%S` --backend {{ backend }} {% if vault %} --vault {% endif %}
 {% endfor %}
-
