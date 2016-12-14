@@ -7,7 +7,7 @@ options:
       https://doc.rust-lang.org/log/log/enum.LogLevel.html
   backup-frequency:
     type: string
-    default: "@daily"
+    default: "hourly"
     description: |
          How often to run backups.  Any valid crontab specification will work here. For more
          information please see man 5 cronttab
