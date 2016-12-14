@@ -69,10 +69,9 @@ def install_ceph():
 def setup_cron_job(cron_spec, directories_list):
     cron_path = os.path.join(os.sep,
                              "etc",
-                             "cron.d"
+                             "cron.d",
                              "backup")
-    directories = ' '.join(directories_list)
-    context = {'directories': directories}
+    context = {'directories': directories_list}
     backend = Backend()
 
     # Overwrite the file if needed
@@ -124,6 +123,11 @@ def setup_backup_cron():
     status_set('maintenance', 'Setting up backup cron job')
     setup_cron_job(cron_spec=config('backup-frequency'),
                    directories_list=config('backup-path').split(' '))
+
+
+@hooks.hook('config-changed')
+def config_changed():
+    setup_backup_cron()
 
 
 @hooks.hook('mon-relation-joined')
