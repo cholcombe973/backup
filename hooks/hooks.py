@@ -115,7 +115,7 @@ def write_config(config_file_name, contents):
 
 
 def setup_backup_cron():
-    backup_period = config('backup-schedule')
+    backup_period = config('backup-frequency')
     if backup_period not in valid_backup_periods:
         # Fail
         status_set('blocked', 'Invalid backup period.')
